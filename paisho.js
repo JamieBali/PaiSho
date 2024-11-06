@@ -585,7 +585,7 @@ function identifyPossibleMoves(passedBoard, passedOffBoard, player){
         
 }
 
-function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardState, player){    
+function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardState, player, alpha, beta){    
     // the first minimax step
     if (depth == 1){
         console.log("AI Thinking: Layer 1")
@@ -596,21 +596,20 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
             var boardstates = identifyPossibleMoves(boardstate, p2offboardState, player)
         }
 
-        //console.log(boardstates)
-
         var bestScore = -100
         var bestBoard = []
-        var bestOffBoard = []
 
         for (const element of boardstates){
             var tempBoard = element.map(function(arr) {
                 return arr.slice();
             });
             if (player == 1){
-                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], tempBoard[1], p2OffBoard, 2)
+                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], tempBoard[1], p2OffBoard, 2, alpha, beta)
+                beat = nextLayer[3]
             }
             else {
-                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1 )
+                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1, alpha, beta)
+                alpha = nextLayer[3]
             }
 
             var boardVal = nextLayer[0]
@@ -619,16 +618,38 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
                 bestScore = boardVal
                 bestBoard = tempBoard
             }
-            else if (player == 1 && boardVal <= bestScore){ // p1 aims for the lowest score
-                bestScore = boardVal
-                bestBoard = tempBoard
+            else if (player == 1){
+                if (boardVal <= bestScore){ // p1 aims for the lowest score
+                    bestScore = boardVal
+                    bestBoard = tempBoard
+                }
+                if (bestScore < beta){
+                    beta = bestScore
+                }
+                if (alpha >= beta){
+                    break
+                }
             }
-            else if (player == 2 && boardVal >= bestScore){ // p2 aims for the lowest score
-                bestScore = boardVal
-                bestBoard = tempBoard
+            else if (player == 2){
+                if (boardVal >= bestScore){ // p2 aims for the highest score
+                    bestScore = boardVal
+                    bestBoard = tempBoard
+                }
+                if (bestScore > alpha){
+                    alpha = bestScore
+                }
+                if (alpha >= beta){
+                    break
+                }
             }
         }
-        return (bestBoard)
+        if (player == 1){
+            return (bestBoard)
+        }
+        else{
+            return (bestBoard)
+
+        }
 
     }
 
@@ -651,16 +672,39 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
                 bestScore = boardVal
                 bestBoard = element
             }
-            else if (player == 1 && boardVal <= bestScore){ // p1 aims for the lowest score
-                bestScore = boardVal
-                bestBoard = element
+            else if (player == 1){
+                if (boardVal <= bestScore){ // p1 aims for the lowest score
+                    bestScore = boardVal
+                    bestBoard = tempBoard
+                }
+                if (bestScore < beta){
+                    beta = bestScore
+                }
+                if (alpha >= beta){
+                    break
+                }
             }
-            else if (player == 2 && boardVal >= bestScore){ // p2 aims for the lowest score
-                bestScore = boardVal
-                bestBoard = element
+            else if (player == 2){
+                if (boardVal >= bestScore){ // p2 aims for the highest score
+                    bestScore = boardVal
+                    bestBoard = tempBoard
+                }
+                if (bestScore > alpha){
+                    alpha = bestScore
+                }
+                if (alpha >= beta){
+                    break
+                }
             }
         }
-        return (bestScore)
+        if (player == 1){
+            return ([bestScore, bestBoard, beta])
+        }
+        else{
+            return ([bestScore, bestBoard, alpha])
+
+        }
+
     
     }
 
@@ -682,10 +726,12 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
                 return arr.slice();
             });
             if (player == 1){
-                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], tempBoard[1], p2OffBoard, 2)
+                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], tempBoard[1], p2OffBoard, 2, alpha, beta)
+                beat = nextLayer[3]
             }
             else {
-                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1 )
+                var nextLayer = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1, alpha, beta)
+                alpha = nextLayer[3]
             }
 
             var boardVal = nextLayer[0]
@@ -694,16 +740,37 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
                 bestScore = boardVal
                 bestBoard = tempBoard
             }
-            else if (player == 1 && boardVal <= bestScore){ // p1 aims for the lowest score
-                bestScore = boardVal
-                bestBoard = tempBoard
+            else if (player == 1){
+                if (boardVal <= bestScore){ // p1 aims for the lowest score
+                    bestScore = boardVal
+                    bestBoard = tempBoard
+                }
+                if (bestScore < beta){
+                    beta = bestScore
+                }
+                if (alpha >= beta){
+                    break
+                }
             }
-            else if (player == 2 && boardVal >= bestScore){ // p2 aims for the lowest score
-                bestScore = boardVal
-                bestBoard = tempBoard
+            else if (player == 2){
+                if (boardVal >= bestScore){ // p2 aims for the highest score
+                    bestScore = boardVal
+                    bestBoard = tempBoard
+                }
+                if (bestScore > alpha){
+                    alpha = bestScore
+                }
+                if (alpha >= beta){
+                    break
+                }
             }
         }
-        return ([bestScore, bestBoard])
+        if (player == 1){
+            return ([bestScore, bestBoard, beta])
+        }
+        else{
+            return ([bestScore, bestBoard, alpha])
+        }
     }
 }
 
@@ -784,7 +851,7 @@ function makeAction(xcoord, ycoord) {
                 redrawBoard()
                 
                 player = 2
-                var AIReturn = minimaxStep(1, 4, board, p1OffBoard, p2OffBoard, player)
+                var AIReturn = minimaxStep(1, 4, board, p1OffBoard, p2OffBoard, player, -100, 100)
                 console.log(AIReturn)
 
                 board = AIReturn[0]
