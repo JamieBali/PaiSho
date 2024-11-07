@@ -37,23 +37,23 @@ var highlightBoard = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
 
 var specialsBoard = [
+    [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,2,0,3,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,2,2,0,3,3,0,0,0,0,0,0],
     [0,0,0,0,0,2,2,2,0,3,3,3,0,0,0,0,0],
     [0,0,0,0,2,2,2,2,0,3,3,3,3,0,0,0,0],
-    [0,0,0,2,2,2,2,2,0,3,3,3,3,3,0,0,0],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [0,0,0,3,3,3,3,3,0,2,2,2,2,2,0,0,0],
+    [1,0,0,2,2,2,2,2,0,3,3,3,3,3,0,0,1],
+    [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+    [1,0,0,3,3,3,3,3,0,2,2,2,2,2,0,0,1],
     [0,0,0,0,3,3,3,3,0,2,2,2,2,0,0,0,0],
     [0,0,0,0,0,3,3,3,0,2,2,2,0,0,0,0,0],
     [0,0,0,0,0,0,3,3,0,2,2,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,3,0,2,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0]]
+    [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0]]
 
 var turn = 1
 
@@ -439,14 +439,23 @@ function determineBoardValue(passedBoard){
     var p1tiles = []
     var p2tiles = []
 
+    var p1blooms = 0
+    var p2blooms = 0
+
     for (let i = 0; i < 17; i++){
         for (let j = 0; j < 17; j++){
-            if (specialsBoard[i][j] == 1){continue}
+            if (specialsBoard[i][j] <= 1){continue}
             if (passedBoard[i][j] >= 2 && passedBoard[i][j] <= 9){
                 p1tiles.push([i,j,passedBoard[i][j]])
+                if (specialsBoard[i][j] >= 2){
+                    p1blooms += 0.25
+                }
             }
             if (passedBoard[i][j] >= 10 && passedBoard[i][j] <= 17){
                 p2tiles.push([i,j,passedBoard[i][j]])
+                if (specialsBoard[i][j] >= 2){
+                    p2blooms += 0.25
+                }
             }
         }
     }
@@ -468,10 +477,12 @@ function determineBoardValue(passedBoard){
     var harmonies = goThroughTiles(p2tiles)
     // if harmonies >= 4 game may be over
     boardValue += harmonies
+    boardValue += p2blooms
 
     harmonies = goThroughTiles(p1tiles)
     // if harmonies >= 4 game may be over
     boardValue -= harmonies
+    boardValue -= p1blooms
 
     return boardValue
 }
@@ -585,17 +596,154 @@ function identifyPossibleMoves(passedBoard, passedOffBoard, player){
         
 }
 
+function minimaxStep(boardState, p1OffBoard, p2OffBoard, player, depth, maxDepth, alpha, beta){
+    //console.log("d: " + depth)
+    if (player == 1){
+        var moves = identifyPossibleMoves(boardState, p1OffBoard, player)    // start by getting all the valid moves it could take at a point.
+    }
+    else{
+        var moves = identifyPossibleMoves(boardState, p2OffBoard, player)
+    }
+
+    var minval = 100
+    var maxval = -100
+
+    var breaker = false
+    var x = 0
+
+    // BOTTOM LAYER OF TREE
+    if (depth == 1){
+        
+        console.log(moves.length)
+                
+        while (x < moves.length  && breaker == false){                                       // the breaker exists so we don't have to use a break command to
+                                                                        // exit the loop when the path is pruned.
+            var temp = determineBoardValue(moves[x][0])                 // get value of a board state after a certain move
+            if (player == 2){
+                if (temp > maxval){             
+                    maxval = temp
+                }
+                if (temp > alpha){
+                    alpha = temp
+                }
+                if (alpha >= beta){
+                    breaker = true
+                }  
+            }
+            else{               
+                if (temp < minval){       
+                    minval = temp
+                }
+                if (temp < beta){
+                    beta = temp
+                }
+                if (alpha >= beta){
+                    breaker = true
+                }  
+            }
+            x += 1
+        }
+        if (player == 2){
+            return [maxval, alpha]
+        }
+        else{ 
+            return [minval, beta]   
+        }
+        
+    }
+
+    else if (depth != maxDepth){
+        while (x < moves.length && breaker == false){
+            if (player == 1){
+                var resp = minimaxStep(moves[x][0], moves[x][1], p2OffBoard, 2, depth - 1, maxDepth, alpha, beta)
+                var temp = resp[0]
+                beta = resp[1]
+            }
+            else{
+                var resp = minimaxStep(moves[x][0], p1OffBoard, moves[x][1], 1, depth - 1, maxDepth, alpha, beta)
+                var temp = resp[0]
+                alpha = resp[1]
+            }
+
+            if (player == 2){
+                if (temp > maxval){             
+                    maxval = temp
+                }
+                if (temp > alpha){
+                    alpha = temp
+                }
+                if (alpha >= beta){
+                    breaker = true
+                }  
+            }
+            else{                
+                if (temp < minval){             
+                    minval = temp
+                }
+                if (temp < beta){
+                    beta = temp
+                }
+                if (alpha >= beta){
+                    breaker = true
+                }  
+            }
+            x += 1
+
+        }
+        if (player == 2){
+            return [maxval, alpha]
+        }
+        else{
+            return [minval, beta]
+        }
+    
+    }
+
+
+    else{
+        var bestIndex = -1
+        while (x < moves.length){ 
+            if (player == 1){
+                var resp = minimaxStep(moves[x][0], moves[x][1], p2OffBoard, 2, depth - 1, maxDepth, alpha, beta)
+                var temp = resp[0]
+                beta = resp[1]
+            }
+            else{
+                var resp = minimaxStep(moves[x][0], p1OffBoard, moves[x][1], 1, depth - 1, maxDepth, alpha, beta)
+                var temp = resp[0]
+                alpha = resp[1]
+            }
+            if (player == 2){
+                if (temp > maxval){
+                    maxval = temp
+                    bestIndex = x 
+                }
+            }
+            else{
+                if (temp < minval){
+                    minval = temp
+                    bestIndex = x   
+                }
+            }
+            x += 1
+        }
+        return moves[bestIndex]
+    }
+}
+
+/*
 function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardState, player, alpha, beta){    
     
-    console.log(boardstate)
+    //console.log(boardstate)
 
     if (depth==maxdepth){
         var boardScore = determineBoardValue(boardstate)
-        return(boardScore)
+        console.log(boardstate)
+        return([boardScore,null])
     }
 
     else if (depth == 1){
-        var bestScore = -20
+        var bestScore = -21
         var bestBoard = []
         var nextLayers = identifyPossibleMoves(boardstate, p2offboardState, 2)
         for (const element of nextLayers){
@@ -603,14 +751,27 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
                 return arr.slice();
             });
             
-            var boardScore = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1, alpha, beta)
+            var resp = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1, alpha, beta)
+            var boardScore = resp[0]
+            if (resp[1] != null){
+                alpha = resp[1]
+            }
             if (boardScore > bestScore){
+                console.log("new board")
                 bestBoard = element.map(function(arr) {
                     return arr.slice();
                 });
                 bestScore = boardScore
             }
+            if (boardScore > alpha){
+                alpha = boardScore
+            }
+            if (alpha >= beta){
+                console.log (alpha + ">=" + beta)
+                //break
+            }
         }
+        console.log(bestBoard)
         return (bestBoard)
     }
 
@@ -634,27 +795,54 @@ function minimaxStep(depth, maxdepth, boardstate, p1offboardState, p2offboardSta
             });
             
             if (player == 1){
-                var boardScore = minimaxStep(depth + 1, maxdepth, tempBoard[0], tempBoard[1], p2OffBoard, 2, alpha, beta)
+                var resp = minimaxStep(depth + 1, maxdepth, tempBoard[0], tempBoard[1], p2OffBoard, 2, alpha, beta)
+                var boardScore = resp[0]
+                if (resp[1] != null){
+                    beta = resp[1]
+                }
                 if (boardScore < bestScore){
                     bestBoard = element.map(function(arr) {
                         return arr.slice();
                     });
                     bestScore = boardScore
                 }
+                if (boardScore < beta){
+                    beta = boardScore
+                }
+                if (alpha >= beta){
+//                    break
+                }
             }
             else{
-                var boardScore = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1, alpha, beta)
+                var resp = minimaxStep(depth + 1, maxdepth, tempBoard[0], p1OffBoard, tempBoard[1], 1, alpha, beta)
+                var boardScore = resp[0]
+                if (resp[1] != null){
+                    alpha = resp[1]
+                }
                 if (boardScore > bestScore){
                     bestBoard = element.map(function(arr) {
                         return arr.slice();
                     });
                     bestScore = boardScore
                 }
+                if (boardScore > alpha){
+                    alpha = boardScore
+                }
+                if (alpha >= beta){
+                    //break
+                }
+                    
             }
         }
-        return (bestScore)
+        if (player == 1){
+            return ([bestScore,alpha])
+        }
+        else{
+            return ([bestScore,alpha])
+        }
     }
 }
+*/
 
 var queuedMove = [0,0,0]
 // 0 : type (1 = move, 2 = place)
@@ -733,9 +921,9 @@ function makeAction(xcoord, ycoord) {
                 redrawBoard()
                 
                 player = 2
-                var AIReturn = minimaxStep(1, 2, board, p1OffBoard, p2OffBoard, player, -100, 100)
+                var AIReturn = minimaxStep(board, p1OffBoard, p2OffBoard, player, 4, 4, -100, 100)
                 console.log("returning")
-                console.log(AIReturn)
+                //console.log(AIReturn)
 
                 board = AIReturn[0]
                 p2OffBoard = AIReturn[1]
